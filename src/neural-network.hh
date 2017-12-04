@@ -2,48 +2,27 @@
 
 #include <functional>
 #include <vector>
+#include "neuron.hh"
 
-template <typename InputType, typename OutputType>
+template <typename T>
 class NeuralNetwork
 {
-private:
-    using InputsType = std::vector<InputType>;
-    using OutputsType = std::vector<OutputType>;
-
-    struct ForwardResult
-    {
-        InputsType hidden_sums_;
-        InputsType hidden_results_;
-        OutputType output_sum_;
-        OutputType output_result_;
-    };
-
-    struct Neuron
-    {
-        InputsType input_weight_;
-        OutputType output_weight_;
-    };
-
 public:
-    NeuralNetwork(unsigned int input_amount, unsigned int output_amount,
-                  unsigned int neurons_amount,
-        const std::function<OutputType(InputType)>& activation_func,
-        const std::function<OutputType(InputType)>& prime_activation_func);
+    using layer_type = std::vector<Neuron<T>>;
 
-    void train(InputsType inputs, OutputType target);
+    NeuralNetwork(unsigned int input_nb, unsigned int hidden_nb,
+                  unsigned int output_nb, std::function<T(T)> activate,
+                  std::function<T(T)> activate_prime);
 
+    void feed_forward(std::vector<T> inputs);
+    T compute(std::vector<T> inputs);
 private:
-    ForwardResult forward(InputsType inputs) const;
-    OutputType back_propagate(InputsType inputs, OutputType target,
-        ForwardResult res);
+    layer_type input_layer_;
+    layer_type hidden_layer_;
+    layer_type output_layer_;
 
-private:
-    const unsigned int input_amount_;
-    const unsigned int output_amount_;
-    const unsigned int neurons_amount_;
-    std::vector<Neuron> neurons_;
-    const std::function<OutputType(InputType)> activate_;
-    const std::function<OutputType(InputType)> activate_prime_;
+    const std::function<T(T)> activate_;
+    const std::function<T(T)> activate_prime_;
 };
 
 #include "neural-network.hxx"

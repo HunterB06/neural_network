@@ -13,6 +13,10 @@ all: $(BIN)
 
 $(BIN): $(OBJ)
 
+.PHONY:debug
+debug: CXXFLAGS+= -g3
+debug: $(BIN)
+
 .PHONY: clean
 clean:
 	$(RM) $(BIN)

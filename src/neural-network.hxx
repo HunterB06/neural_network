@@ -5,105 +5,68 @@
 #include <random>
 #include <exception>
 #include <algorithm>
+#include "neuron.hh"
 
 #include <iostream>
 
-template <typename InputType, typename OutputType>
-NeuralNetwork<InputType, OutputType>::NeuralNetwork(
-    unsigned int input_amount, unsigned int output_amount,
-    unsigned int neurons_amount,
-    const std::function<OutputType(InputType)>& activation_func,
-    const std::function<OutputType(InputType)>& prime_activation_func)
-    : input_amount_(input_amount)
-    , output_amount_(output_amount)
-    , neurons_amount_(neurons_amount)
-    , neurons_(neurons_amount)
-    , activate_(activation_func)
-    , activate_prime_(prime_activation_func)
+template <typename T>
+NeuralNetwork<T>::NeuralNetwork(unsigned int input_nb, unsigned int hidden_nb,
+                  unsigned int output_nb, std::function<T(T)> activate,
+                  std::function<T(T)> activate_prime)
+    : input_layer_(input_nb + 1, Neuron<T>(hidden_nb)) // + 1 for the bias
+    , hidden_layer_(hidden_nb + 1, Neuron<T>(output_nb)) // + 1 for the bias
+    , output_layer_(output_nb, Neuron<T>(1))
+    , activate_(activate)
+    , activate_prime_(activate_prime)
 {
-    // Initialize neurons with random weights
-    for (auto& neuron : neurons_)
-    {
-        std::random_device rd;
-        std::mt19937 gen(rd());
+    std::random_device rd;
+    std::mt19937 gen(rd());
 
-        std::normal_distribution<InputType> input_distrib;
-        for (unsigned int j = 0; j < input_amount; ++j)
-            neuron.input_weight_.push_back(input_distrib(gen));
-        std::normal_distribution<OutputType> output_distrib;
-        neuron.output_weight_ = output_distrib(gen);
+    std::normal_distribution<T> distrib;
+    for (auto& n : input_layer_)
+        for (auto& w : n.out_weights_)
+            w = distrib(gen);
+
+    for (auto& n : hidden_layer_)
+        for (auto& w : n.out_weights_)
+            w = distrib(gen);
+
+    for (auto& n : output_layer_)
+        for (auto& w : n.out_weights_)
+            w = distrib(gen);
+}
+
+template <typename T>
+void NeuralNetwork<T>::feed_forward(std::vector<T> inputs)
+{
+    if (inputs.size() + 1 != input_layer_.size())
+        throw std::invalid_argument("Incorrect inputs amount.");
+
+    for (typename std::vector<T>::size_type i = 0; i < inputs.size(); ++i)
+        input_layer_[i].feed(inputs[i]);
+    input_layer_.back().feed(1); // bias
+
+    for (typename std::vector<T>::size_type i = 0; i < hidden_layer_.size() - 1; ++i)
+    {
+        T sum = 0;
+        for (auto& n : input_layer_)
+            sum += activate_(n.outputs_[i]);
+        hidden_layer_[i].feed(sum);
+    }
+    hidden_layer_.back().feed(1); // bias
+
+    for (typename std::vector<T>::size_type i = 0; i < output_layer_.size(); ++i)
+    {
+        T sum = 0;
+        for (auto& n : hidden_layer_)
+            sum += activate_(n.outputs_[i]);
+        output_layer_[i].feed(sum);
     }
 }
 
-template <typename InputType, typename OutputType>
-typename NeuralNetwork<InputType, OutputType>::ForwardResult
-NeuralNetwork<InputType, OutputType>::forward(InputsType inputs) const
+template <typename T>
+T NeuralNetwork<T>::compute(std::vector<T> inputs)
 {
-    if (inputs.size() != input_amount_)
-        throw std::invalid_argument("Inputs number different from expected");
-    ForwardResult res;
-
-    for (const auto& neuron : neurons_)
-    {
-        InputType hidden_sum = 0;
-        for (unsigned int i = 0; i < input_amount_; ++i)
-            hidden_sum += neuron.input_weight_[i] * inputs[i];
-        InputType hidden_result = activate_(hidden_sum);
-        res.hidden_sums_.push_back(hidden_sum);
-        res.hidden_results_.push_back(hidden_result);
-    }
-
-    for (unsigned int i = 0; i < neurons_amount_; ++i)
-        res.output_sum_ += res.hidden_results_[i] * neurons_[i].output_weight_;
-    res.output_result_ = activate_(res.output_sum_);
-    return res;
-}
-
-template <typename InputType, typename OutputType>
-OutputType
-NeuralNetwork<InputType, OutputType>::back_propagate(InputsType inputs,
-                                                     OutputType target,
-                                                     ForwardResult res)
-{
-    double learning_rate = 0.5;
-    OutputType error = target - res.output_result_;
-    OutputType delta_output_layer = activate_prime_(res.output_sum_) * error;
-    // compute changes in neurons output weight
-    InputsType hidden_output_changes;
-    std::transform(res.hidden_results_.begin(), res.hidden_results_.end(),
-                   std::back_inserter(hidden_output_changes),
-                   [&delta_output_layer, &learning_rate](const auto& hidden_res)
-                   { return (delta_output_layer / hidden_res) * learning_rate; });
-
-    // compute delta hidden changes
-    InputsType delta_hidden_layers;
-    for (unsigned int i = 0; i < neurons_amount_; ++i)
-        delta_hidden_layers.push_back((delta_output_layer
-                                       / neurons_[i].output_weight_)
-                                      * activate_prime_(res.hidden_sums_[i]));
-
-
-    // update input weights
-    for (unsigned int i = 0; i < input_amount_; ++i)
-        for (unsigned int j = 0; j < neurons_amount_; ++j)
-            neurons_[j].input_weight_[i] += delta_hidden_layers[j] / inputs[i];
-
-    // update neurons output weight
-    for (unsigned int i = 0; i < neurons_amount_; ++i)
-        neurons_[i].output_weight_ += hidden_output_changes[i];
-
-    return error;
-}
-
-template <typename InputType, typename OutputType>
-void
-NeuralNetwork<InputType, OutputType>::train(InputsType inputs,
-                                            OutputType target)
-{
-    for (int i = 0; i < 1000; ++i)
-    {
-        auto res = forward(inputs);
-        auto error = back_propagate(inputs, target, res);
-        std::cout << error << std::endl;
-    }
+    feed_forward(inputs);
+    return output_layer_[0].outputs_[0];
 }

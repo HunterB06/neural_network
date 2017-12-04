@@ -14,7 +14,8 @@ static double sigmoid_prime(double x)
 
 int main()
 {
-    NeuralNetwork<double, double> n(2, 1, 3, sigmoid, sigmoid_prime);
-    n.train({1, 1}, 0);
+    NeuralNetwork<double> n(2, 3, 1, sigmoid, sigmoid_prime);
+//    n.feed_forward({1.0, 1.0});
+    std::cout << n.compute({1.0, 1.0}) << std::endl;
     return 0;
 }
