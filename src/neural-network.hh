@@ -15,6 +15,8 @@ public:
                   std::function<T(T)> activate_prime);
 
     void feed_forward(std::vector<T> inputs);
+    void back_propagate(T error);
+    void train(std::vector<T> inputs, T target);
     T compute(std::vector<T> inputs);
 private:
     layer_type input_layer_;

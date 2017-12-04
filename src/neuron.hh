@@ -21,6 +21,11 @@ public:
     ** The outputs of the neuron before the activation function
     */
     std::vector<T> outputs_;
+
+    /**
+    ** The outputs of the neuron after the activation function
+    */
+    std::vector<T> activated_outputs_;
 };
 
 #include "neuron.hxx"

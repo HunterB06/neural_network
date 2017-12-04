@@ -50,7 +50,10 @@ void NeuralNetwork<T>::feed_forward(std::vector<T> inputs)
     {
         T sum = 0;
         for (auto& n : input_layer_)
-            sum += activate_(n.outputs_[i]);
+        {
+            n.activated_outputs_[i] = activate_(n.outputs_[i]);
+            sum += n.activated_outputs_[i];
+        }
         hidden_layer_[i].feed(sum);
     }
     hidden_layer_.back().feed(1); // bias
@@ -59,9 +62,64 @@ void NeuralNetwork<T>::feed_forward(std::vector<T> inputs)
     {
         T sum = 0;
         for (auto& n : hidden_layer_)
-            sum += activate_(n.outputs_[i]);
+        {
+            n.activated_outputs_[i] = activate_(n.outputs_[i]);
+            sum += n.activated_outputs_[i];
+        }
+
         output_layer_[i].feed(sum);
     }
+}
+
+template <typename T>
+void NeuralNetwork<T>::back_propagate(T error)
+{
+    double learning_rate = 0.17;
+
+//  OutputType delta_output_layer = activate_prime_(res.output_sum_) * error;
+//  // compute changes in neurons output weight
+//      InputsType hidden_output_changes;
+//  std::transform(res.hidden_results_.begin(), res.hidden_results_.end(),
+//                 std::back_inserter(hidden_output_changes),
+//                 [&delta_output_layer, &learning_rate](const auto& hidden_res)
+//                 { return (delta_output_layer / hidden_res) * learning_rate; });
+//  double learning_rate = 0.17;
+
+//  // compute delta hidden changes
+//      InputsType delta_hidden_layers;
+//  for (unsigned int i = 0; i < neurons_amount_; ++i)
+//          delta_hidden_layers.push_back((delta_output_layer
+//                                       / neurons_[i].output_weight_)
+//                                       * activate_prime_(res.hidden_sums_[i]));
+
+
+//  // update input weights
+//  for (unsigned int i = 0; i < input_amount_; ++i)
+//      for (unsigned int j = 0; j < neurons_amount_; ++j)
+//              neurons_[j].input_weight_[i] += delta_hidden_layers[j] / inputs[i];
+// -
+//  // update neurons output weight
+//  for (unsigned int i = 0; i < neurons_amount_; ++i)
+//      neurons_[i].output_weight_ += hidden_output_changes[i];
+// -
+//  return error;
+
+    for (typename std::vector<T>::size_type i = 0; i < output_layer_.size(); ++i)
+    {
+        for (auto& n : hidden_layer_)
+        {
+            double delta_out = activate_prime_(n.activated_outputs_[i]) * error;
+            double new_weight = n.out_weights_[i] + learning_rate * delta_out / (n.outputs_[i] / n.out_weights_[i]);
+            n.out_weights_[i] = new_weight;
+//            std::cout << "old: " << n.out_weights_[i] << " new: " << new_weight << std::endl;
+        }
+    }
+}
+
+template <typename T>
+void NeuralNetwork<T>::train(std::vector<T> inputs, T target)
+{
+    back_propagate(compute(inputs) - target);
 }
 
 template <typename T>

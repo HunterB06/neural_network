@@ -5,6 +5,7 @@ Neuron<T>::Neuron(unsigned int nb_outputs)
     : nb_outputs_(nb_outputs)
     , out_weights_(nb_outputs)
     , outputs_(nb_outputs)
+    , activated_outputs_(nb_outputs)
 {}
 
 template <typename T>
