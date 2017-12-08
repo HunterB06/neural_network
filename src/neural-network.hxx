@@ -13,9 +13,9 @@ template <typename T>
 NeuralNetwork<T>::NeuralNetwork(unsigned int input_nb, unsigned int hidden_nb,
                   unsigned int output_nb, std::function<T(T)> activate,
                   std::function<T(T)> activate_prime)
-    : input_layer_(input_nb + 1, Neuron<T>(hidden_nb)) // + 1 for the bias
-    , hidden_layer_(hidden_nb + 1, Neuron<T>(output_nb)) // + 1 for the bias
-    , output_layer_(output_nb, Neuron<T>(1))
+    : input_layer_(input_nb + 1, Neuron<T>(hidden_nb, activate)) // + 1 for the bias
+    , hidden_layer_(hidden_nb + 1, Neuron<T>(output_nb, activate)) // + 1 for the bias
+    , output_layer_(output_nb, Neuron<T>(1, activate))
     , activate_(activate)
     , activate_prime_(activate_prime)
 {
@@ -50,10 +50,8 @@ void NeuralNetwork<T>::feed_forward(std::vector<T> inputs)
     {
         T sum = 0;
         for (auto& n : input_layer_)
-        {
-            n.activated_outputs_[i] = activate_(n.outputs_[i]);
             sum += n.activated_outputs_[i];
-        }
+
         hidden_layer_[i].feed(sum);
     }
     hidden_layer_.back().feed(1); // bias

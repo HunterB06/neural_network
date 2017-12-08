@@ -1,12 +1,13 @@
 #pragma once
 
 #include <vector>
+#include <functional>
 
 template <typename T>
 class Neuron
 {
 public:
-    Neuron(unsigned int nb_outputs);
+    Neuron(unsigned int nb_outputs, std::function<T(T)> activate);
 
     /**
     ** Give an input to the neuron and fill the outputs vector.
@@ -26,6 +27,7 @@ public:
     ** The outputs of the neuron after the activation function
     */
     std::vector<T> activated_outputs_;
+    std::function<T(T)> activate_;
 };
 
 #include "neuron.hxx"
