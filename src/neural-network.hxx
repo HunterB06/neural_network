@@ -121,9 +121,9 @@ NeuralNetwork<T>::apply_new_weights(const std::vector<std::vector<T>>& hidden_w,
 
 template <typename T>
 void NeuralNetwork<T>::train(const training_set_type& inputs,
-                             const output_set& target)
+                             const output_set& target, unsigned int iter_nb)
 {
-    for (int i = 0; i < 100000; ++i)
+    for (unsigned int i = 0; i < iter_nb; ++i)
     {
         feed_forward(inputs[i % inputs.size()]);
         back_propagate(inputs[i % inputs.size()], target[i % inputs.size()]);
@@ -135,6 +135,12 @@ T NeuralNetwork<T>::compute(const input_type& inputs)
 {
     feed_forward(inputs);
     return output_layer_[0].activated_output_;
+}
+
+template <typename T>
+T NeuralNetwork<T>::operator()(const input_type& inputs)
+{
+    return compute(inputs);
 }
 
 // Non member functions

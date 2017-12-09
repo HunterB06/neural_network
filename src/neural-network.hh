@@ -18,8 +18,21 @@ public:
     NeuralNetwork(unsigned int input_nb, unsigned int hidden_nb,
                   unsigned int output_nb, const std::function<T(T)>& activate);
 
-    void train(const training_set_type& inputs, const output_set& target);
+    /**
+    ** Train the network using expected output with corresponding inputs.
+    ** @param inputs: a set of inputs that the neural net will learn to handle.
+    ** @param target: the expected output corresponding to the inputs.
+    ** @param iter_nb: the number of time the network will train itself
+    */
+    void train(const training_set_type& inputs, const output_set& target,
+               unsigned int iter_nb);
+
+    /**
+    ** Compute the output of the neural network. This function should be
+    ** efficient only after training
+    */
     T compute(const input_type& inputs);
+    T operator()(const input_type& inputs);
 
 private:
     void feed_forward(const input_type& inputs);
@@ -28,7 +41,8 @@ private:
                            const std::vector<std::vector<T>>& output_w);
 
     template <typename U>
-    friend std::ostream& operator<<(std::ostream& ostr, const NeuralNetwork<U>& n);
+    friend std::ostream& operator<<(std::ostream& ostr,
+                                    const NeuralNetwork<U>& n);
 private:
     unsigned int input_nb_;
     layer_type hidden_layer_;
