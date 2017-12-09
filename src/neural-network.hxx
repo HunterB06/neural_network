@@ -11,118 +11,133 @@
 
 template <typename T>
 NeuralNetwork<T>::NeuralNetwork(unsigned int input_nb, unsigned int hidden_nb,
-                  unsigned int output_nb, std::function<T(T)> activate,
-                  std::function<T(T)> activate_prime)
-    : input_layer_(input_nb + 1, Neuron<T>(hidden_nb, activate)) // + 1 for the bias
-    , hidden_layer_(hidden_nb + 1, Neuron<T>(output_nb, activate)) // + 1 for the bias
-    , output_layer_(output_nb, Neuron<T>(1, activate))
+                                unsigned int output_nb, std::function<T(T)> activate,
+                                std::function<T(T)> activate_prime)
+    : input_nb_(input_nb)
+    , hidden_layer_(hidden_nb, Neuron<T>(input_nb + 1, activate)) // + 1 for the bias
+    , output_layer_(output_nb, Neuron<T>(hidden_nb + 1, activate)) // + 1 for the bias
     , activate_(activate)
     , activate_prime_(activate_prime)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    std::normal_distribution<T> distrib;
-    for (auto& n : input_layer_)
-        for (auto& w : n.out_weights_)
-            w = distrib(gen);
-
+    std::uniform_real_distribution<> distrib(-1, 1);
     for (auto& n : hidden_layer_)
-        for (auto& w : n.out_weights_)
+        for (auto& w : n.in_weights_)
+        {
             w = distrib(gen);
+            std::cout << "gen: " << w << std::endl;
+        }
 
     for (auto& n : output_layer_)
-        for (auto& w : n.out_weights_)
+        for (auto& w : n.in_weights_)
+        {
             w = distrib(gen);
+            std::cout << "gen: " << w << std::endl;
+        }
 }
 
 template <typename T>
 void NeuralNetwork<T>::feed_forward(std::vector<T> inputs)
 {
-    if (inputs.size() + 1 != input_layer_.size())
+    if (inputs.size() != input_nb_)
         throw std::invalid_argument("Incorrect inputs amount.");
 
-    for (typename std::vector<T>::size_type i = 0; i < inputs.size(); ++i)
-        input_layer_[i].feed(inputs[i]);
-    input_layer_.back().feed(1); // bias
+    // feed hidden layer
+    for (typename layer_type::size_type i = 0; i < hidden_layer_.size(); ++i)
+        hidden_layer_[i].feed(inputs);
 
-    for (typename std::vector<T>::size_type i = 0; i < hidden_layer_.size() - 1; ++i)
-    {
-        T sum = 0;
-        for (auto& n : input_layer_)
-            sum += n.activated_outputs_[i];
-
-        hidden_layer_[i].feed(sum);
-    }
-    hidden_layer_.back().feed(1); // bias
-
-    for (typename std::vector<T>::size_type i = 0; i < output_layer_.size(); ++i)
-    {
-        T sum = 0;
-        for (auto& n : hidden_layer_)
-        {
-            n.activated_outputs_[i] = activate_(n.outputs_[i]);
-            sum += n.activated_outputs_[i];
-        }
-
-        output_layer_[i].feed(sum);
-    }
+    // feed output layer
+    std::vector<T> tmp_inputs(hidden_layer_.size());
+    std::transform(hidden_layer_.begin(), hidden_layer_.end(),
+                   tmp_inputs.begin(),
+                   [](const auto& e){ return e.activated_output_; });
+    for (typename layer_type::size_type i = 0; i < output_layer_.size(); ++i)
+        output_layer_[i].feed(tmp_inputs);
 }
 
 template <typename T>
-void NeuralNetwork<T>::back_propagate(T error)
+void NeuralNetwork<T>::back_propagate(std::vector<T> inputs, T target)
 {
     double learning_rate = 0.17;
+    std::vector<std::vector<T>> new_out_weights(output_layer_.size());
+    std::vector<std::vector<T>> new_hidden_weights(hidden_layer_.size());
 
-//  OutputType delta_output_layer = activate_prime_(res.output_sum_) * error;
-//  // compute changes in neurons output weight
-//      InputsType hidden_output_changes;
-//  std::transform(res.hidden_results_.begin(), res.hidden_results_.end(),
-//                 std::back_inserter(hidden_output_changes),
-//                 [&delta_output_layer, &learning_rate](const auto& hidden_res)
-//                 { return (delta_output_layer / hidden_res) * learning_rate; });
-//  double learning_rate = 0.17;
-
-//  // compute delta hidden changes
-//      InputsType delta_hidden_layers;
-//  for (unsigned int i = 0; i < neurons_amount_; ++i)
-//          delta_hidden_layers.push_back((delta_output_layer
-//                                       / neurons_[i].output_weight_)
-//                                       * activate_prime_(res.hidden_sums_[i]));
-
-
-//  // update input weights
-//  for (unsigned int i = 0; i < input_amount_; ++i)
-//      for (unsigned int j = 0; j < neurons_amount_; ++j)
-//              neurons_[j].input_weight_[i] += delta_hidden_layers[j] / inputs[i];
-// -
-//  // update neurons output weight
-//  for (unsigned int i = 0; i < neurons_amount_; ++i)
-//      neurons_[i].output_weight_ += hidden_output_changes[i];
-// -
-//  return error;
-
-    for (typename std::vector<T>::size_type i = 0; i < output_layer_.size(); ++i)
+    // compute new weight for each output
+    for (typename layer_type::size_type n = 0; n < output_layer_.size(); ++n)
     {
-        for (auto& n : hidden_layer_)
+        auto delta_o1 = (-(target - output_layer_[n].output_)
+                         * output_layer_[n].output_
+                         * (1 - output_layer_[n].output_));
+        for (typename layer_type::size_type i = 0; i < hidden_layer_.size(); ++i)
         {
-            double delta_out = activate_prime_(n.activated_outputs_[i]) * error;
-            double new_weight = n.out_weights_[i] + learning_rate * delta_out / (n.outputs_[i] / n.out_weights_[i]);
-            n.out_weights_[i] = new_weight;
-//            std::cout << "old: " << n.out_weights_[i] << " new: " << new_weight << std::endl;
+            auto delta_wi = delta_o1 * hidden_layer_[i].activated_output_;
+            auto new_weight = (output_layer_[n].in_weights_[i] - delta_wi
+                               * learning_rate);
+            new_out_weights[n].push_back(new_weight);
         }
+        auto new_bias_w = (output_layer_[n].in_weights_.back() - delta_o1
+                           * learning_rate); // Bias
+        new_out_weights[n].push_back(new_bias_w);
     }
+
+    // compute new weight for each hidden node
+    // E_w1 = E_outh1 * outh1_neth1 * neth1_w1
+    for (typename layer_type::size_type i = 0; i < hidden_layer_.size(); ++i)
+    {
+        double Etotal_outh1 = 0.0;
+        for (auto& o : output_layer_)
+        {
+            auto E_outo1 = -(target - o.output_);
+            auto outo1_neto1 = o.output_ * (1 - o.output_);
+            auto neto1_outh1 = o.in_weights_[i];
+            auto Eo1_outh1 = E_outo1 * outo1_neto1 * neto1_outh1;
+            Etotal_outh1 += Eo1_outh1;
+        }
+        auto& h = hidden_layer_[i];
+        auto outh1_neth1 = h.activated_output_ * (1 - h.activated_output_);
+
+        // update each input weight of the neuron h
+        for (typename layer_type::size_type j = 0; j < input_nb_; ++j)
+        {
+            auto neth1_w1 = inputs[j];
+            auto delta_w1 = Etotal_outh1 * outh1_neth1 * neth1_w1;
+            auto new_weight = h.in_weights_[j] - learning_rate * delta_w1;
+            new_hidden_weights[i].push_back(new_weight);
+        }
+        auto new_bias_w = (h.in_weights_.back() - Etotal_outh1 * outh1_neth1
+                           * learning_rate); // Bias
+        new_hidden_weights[i].push_back(new_bias_w);
+    }
+
+    apply_new_weights(new_hidden_weights, new_out_weights);
 }
 
 template <typename T>
-void NeuralNetwork<T>::train(std::vector<T> inputs, T target)
+void
+NeuralNetwork<T>::apply_new_weights(const std::vector<std::vector<T>>& hidden_w,
+                                    const std::vector<std::vector<T>>& output_w)
 {
-    back_propagate(compute(inputs) - target);
+    for (typename layer_type::size_type i = 0; i < hidden_layer_.size(); ++i)
+        hidden_layer_[i].in_weights_ = hidden_w[i];
+
+    for (typename layer_type::size_type i = 0; i < output_layer_.size(); ++i)
+        output_layer_[i].in_weights_ = output_w[i];
+}
+
+
+template <typename T>
+void NeuralNetwork<T>::train(const std::vector<T>& inputs, T target)
+{
+    auto out = compute(inputs);
+    back_propagate(inputs, target);
+    std::cout << out << std::endl;
 }
 
 template <typename T>
-T NeuralNetwork<T>::compute(std::vector<T> inputs)
+T NeuralNetwork<T>::compute(const std::vector<T>& inputs)
 {
     feed_forward(inputs);
-    return output_layer_[0].outputs_[0];
+    return output_layer_[0].output_;
 }

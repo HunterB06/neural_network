@@ -3,20 +3,20 @@
 #include <algorithm>
 
 template <typename T>
-Neuron<T>::Neuron(unsigned int nb_outputs, std::function<T(T)> activate)
-    : nb_outputs_(nb_outputs)
-    , out_weights_(nb_outputs)
-    , outputs_(nb_outputs)
-    , activated_outputs_(nb_outputs)
+Neuron<T>::Neuron(unsigned int nb_inputs, const std::function<T(T)>& activate)
+    : nb_inputs_(nb_inputs)
+    , in_weights_(nb_inputs)
     , activate_(activate)
 {}
 
 template <typename T>
-void Neuron<T>::feed(T input)
+void Neuron<T>::feed(const std::vector<T>& inputs)
 {
-    for (typename std::vector<T>::size_type i = 0; i < outputs_.size(); ++i)
-        outputs_[i] = input * out_weights_[i];
+    output_ = 0;
+    for (typename std::vector<T>::size_type i = 0; i < inputs.size(); ++i)
+        output_ += inputs[i] * in_weights_[i];
+    // add bias
+    output_ += in_weights_.back();
 
-    std::transform(outputs_.begin(), outputs_.end(), activated_outputs_.begin(),
-                   activate_);
+    activated_output_ = activate_(output_);
 }

@@ -14,12 +14,16 @@ public:
                   unsigned int output_nb, std::function<T(T)> activate,
                   std::function<T(T)> activate_prime);
 
-    void feed_forward(std::vector<T> inputs);
-    void back_propagate(T error);
-    void train(std::vector<T> inputs, T target);
-    T compute(std::vector<T> inputs);
+    void train(const std::vector<T>& inputs, T target);
+    T compute(const std::vector<T>& inputs);
+
 private:
-    layer_type input_layer_;
+    void feed_forward(std::vector<T> inputs);
+    void back_propagate(std::vector<T> inputs, T target);
+    void apply_new_weights(const std::vector<std::vector<T>>& hidden_w,
+                           const std::vector<std::vector<T>>& output_w);
+private:
+    unsigned int input_nb_;
     layer_type hidden_layer_;
     layer_type output_layer_;
 

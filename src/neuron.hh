@@ -7,27 +7,27 @@ template <typename T>
 class Neuron
 {
 public:
-    Neuron(unsigned int nb_outputs, std::function<T(T)> activate);
+    Neuron(unsigned int nb_inputs, const std::function<T(T)>& activate);
 
     /**
     ** Give an input to the neuron and fill the outputs vector.
     */
-    void feed(T input);
+    void feed(const std::vector<T>& input);
 
 public:
-    unsigned int nb_outputs_;
-    std::vector<T> out_weights_;
+    unsigned int nb_inputs_;
+    std::vector<T> in_weights_;
 
     /**
     ** The outputs of the neuron before the activation function
     */
-    std::vector<T> outputs_;
+    T output_;
 
     /**
     ** The outputs of the neuron after the activation function
     */
-    std::vector<T> activated_outputs_;
-    std::function<T(T)> activate_;
+    T activated_output_;
+    const std::function<T(T)>& activate_;
 };
 
 #include "neuron.hxx"
