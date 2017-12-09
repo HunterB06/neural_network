@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <vector>
+#include <ostream>
+
 #include "neuron.hh"
 
 template <typename T>
@@ -22,6 +24,9 @@ private:
     void back_propagate(std::vector<T> inputs, T target);
     void apply_new_weights(const std::vector<std::vector<T>>& hidden_w,
                            const std::vector<std::vector<T>>& output_w);
+
+    template <typename U>
+    friend std::ostream& operator<<(std::ostream& ostr, const NeuralNetwork<U>& n);
 private:
     unsigned int input_nb_;
     layer_type hidden_layer_;

@@ -25,17 +25,11 @@ NeuralNetwork<T>::NeuralNetwork(unsigned int input_nb, unsigned int hidden_nb,
     std::uniform_real_distribution<> distrib(-1, 1);
     for (auto& n : hidden_layer_)
         for (auto& w : n.in_weights_)
-        {
             w = distrib(gen);
-            std::cout << "gen: " << w << std::endl;
-        }
 
     for (auto& n : output_layer_)
         for (auto& w : n.in_weights_)
-        {
             w = distrib(gen);
-            std::cout << "gen: " << w << std::endl;
-        }
 }
 
 template <typename T>
@@ -67,9 +61,9 @@ void NeuralNetwork<T>::back_propagate(std::vector<T> inputs, T target)
     // compute new weight for each output
     for (typename layer_type::size_type n = 0; n < output_layer_.size(); ++n)
     {
-        auto delta_o1 = (-(target - output_layer_[n].output_)
-                         * output_layer_[n].output_
-                         * (1 - output_layer_[n].output_));
+        auto delta_o1 = ((output_layer_[n].activated_output_ - target)
+                         * output_layer_[n].activated_output_
+                         * (1 - output_layer_[n].activated_output_));
         for (typename layer_type::size_type i = 0; i < hidden_layer_.size(); ++i)
         {
             auto delta_wi = delta_o1 * hidden_layer_[i].activated_output_;
@@ -89,8 +83,8 @@ void NeuralNetwork<T>::back_propagate(std::vector<T> inputs, T target)
         double Etotal_outh1 = 0.0;
         for (auto& o : output_layer_)
         {
-            auto E_outo1 = -(target - o.output_);
-            auto outo1_neto1 = o.output_ * (1 - o.output_);
+            auto E_outo1 = (o.activated_output_ - target);
+            auto outo1_neto1 = o.activated_output_ * (1 - o.activated_output_);
             auto neto1_outh1 = o.in_weights_[i];
             auto Eo1_outh1 = E_outo1 * outo1_neto1 * neto1_outh1;
             Etotal_outh1 += Eo1_outh1;
@@ -126,18 +120,54 @@ NeuralNetwork<T>::apply_new_weights(const std::vector<std::vector<T>>& hidden_w,
         output_layer_[i].in_weights_ = output_w[i];
 }
 
-
 template <typename T>
 void NeuralNetwork<T>::train(const std::vector<T>& inputs, T target)
 {
-    auto out = compute(inputs);
-    back_propagate(inputs, target);
-    std::cout << out << std::endl;
+    for (int i = 0; i < 1000; ++i)
+    {
+        feed_forward(inputs);
+        back_propagate(inputs, target);
+    }
 }
 
 template <typename T>
 T NeuralNetwork<T>::compute(const std::vector<T>& inputs)
 {
     feed_forward(inputs);
-    return output_layer_[0].output_;
+    return output_layer_[0].activated_output_;
+}
+
+// Non member functions
+template <typename T>
+std::ostream& operator<<(std::ostream& ostr, const NeuralNetwork<T>& nn)
+{
+    ostr << "digraph neural_net" << std::endl
+         << "{" << std::endl;
+
+    for (typename NeuralNetwork<T>::layer_type::size_type i = 0;
+         i < nn.hidden_layer_.size(); ++i)
+    {
+        const auto& n = nn.hidden_layer_[i];
+        for (typename std::vector<T>::size_type j = 0; j < n.in_weights_.size() - 1;
+             ++j)
+        {
+            ostr << "i" << j << " -> " << "\"" << n.activated_output_
+                 << "\" [label=\"" << n.in_weights_[j] << "\" ];" << std::endl;
+        }
+    }
+
+    for (typename NeuralNetwork<T>::layer_type::size_type i = 0;
+         i < nn.output_layer_.size(); ++i)
+    {
+        const auto& n = nn.output_layer_[i];
+        for (typename std::vector<T>::size_type j = 0; j < n.in_weights_.size() - 1;
+             ++j)
+        {
+            ostr << "\"" << nn.hidden_layer_[j].activated_output_ << "\" -> \""
+                 << n.activated_output_ << "\" [label=\""
+                 << n.in_weights_[j] << "\" ];" << std::endl;
+        }
+    }
+
+    return ostr << "}" << std::endl;
 }
