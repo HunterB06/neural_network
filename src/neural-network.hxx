@@ -11,13 +11,12 @@
 
 template <typename T>
 NeuralNetwork<T>::NeuralNetwork(unsigned int input_nb, unsigned int hidden_nb,
-                                unsigned int output_nb, std::function<T(T)> activate,
-                                std::function<T(T)> activate_prime)
+                                unsigned int output_nb,
+                                const std::function<T(T)>& activate)
     : input_nb_(input_nb)
     , hidden_layer_(hidden_nb, Neuron<T>(input_nb + 1, activate)) // + 1 for the bias
     , output_layer_(output_nb, Neuron<T>(hidden_nb + 1, activate)) // + 1 for the bias
     , activate_(activate)
-    , activate_prime_(activate_prime)
 {
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -33,7 +32,7 @@ NeuralNetwork<T>::NeuralNetwork(unsigned int input_nb, unsigned int hidden_nb,
 }
 
 template <typename T>
-void NeuralNetwork<T>::feed_forward(std::vector<T> inputs)
+void NeuralNetwork<T>::feed_forward(const input_type& inputs)
 {
     if (inputs.size() != input_nb_)
         throw std::invalid_argument("Incorrect inputs amount.");
@@ -52,9 +51,9 @@ void NeuralNetwork<T>::feed_forward(std::vector<T> inputs)
 }
 
 template <typename T>
-void NeuralNetwork<T>::back_propagate(std::vector<T> inputs, T target)
+void NeuralNetwork<T>::back_propagate(const input_type& inputs, T target)
 {
-    double learning_rate = 0.17;
+    double learning_rate = 0.5;
     std::vector<std::vector<T>> new_out_weights(output_layer_.size());
     std::vector<std::vector<T>> new_hidden_weights(hidden_layer_.size());
 
@@ -121,17 +120,18 @@ NeuralNetwork<T>::apply_new_weights(const std::vector<std::vector<T>>& hidden_w,
 }
 
 template <typename T>
-void NeuralNetwork<T>::train(const std::vector<T>& inputs, T target)
+void NeuralNetwork<T>::train(const training_set_type& inputs,
+                             const output_set& target)
 {
-    for (int i = 0; i < 1000; ++i)
+    for (int i = 0; i < 100000; ++i)
     {
-        feed_forward(inputs);
-        back_propagate(inputs, target);
+        feed_forward(inputs[i % inputs.size()]);
+        back_propagate(inputs[i % inputs.size()], target[i % inputs.size()]);
     }
 }
 
 template <typename T>
-T NeuralNetwork<T>::compute(const std::vector<T>& inputs)
+T NeuralNetwork<T>::compute(const input_type& inputs)
 {
     feed_forward(inputs);
     return output_layer_[0].activated_output_;
