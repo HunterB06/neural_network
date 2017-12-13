@@ -5,18 +5,18 @@
 #include <random>
 #include <exception>
 #include <algorithm>
-#include "neuron.hh"
-
 #include <iostream>
+
+#include "neuron.hh"
 
 template <typename T>
 NeuralNetwork<T>::NeuralNetwork(unsigned int input_nb, unsigned int hidden_nb,
                                 unsigned int output_nb,
                                 const std::function<T(T)>& activate)
     : input_nb_(input_nb)
-    , hidden_layer_(hidden_nb, Neuron<T>(input_nb + 1, activate)) // + 1 for the bias
-    , output_layer_(output_nb, Neuron<T>(hidden_nb + 1, activate)) // + 1 for the bias
     , activate_(activate)
+    , hidden_layer_(hidden_nb, Neuron<T>(input_nb + 1, activate_)) // + 1 for the bias
+    , output_layer_(output_nb, Neuron<T>(hidden_nb + 1, activate_)) // + 1 for the bias
 {
     std::random_device rd;
     std::mt19937 gen(rd());

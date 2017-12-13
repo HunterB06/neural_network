@@ -6,6 +6,13 @@
 
 #include "neuron.hh"
 
+namespace {
+    double sigmoid(double x)
+    {
+        return 1.0 / (1.0 + exp(-x));
+    }
+}
+
 template <typename T>
 class NeuralNetwork
 {
@@ -16,7 +23,7 @@ public:
     using output_set = std::vector<T>;
 
     NeuralNetwork(unsigned int input_nb, unsigned int hidden_nb,
-                  unsigned int output_nb, const std::function<T(T)>& activate);
+                  unsigned int output_nb, const std::function<T(T)>& activate = sigmoid);
 
     /**
     ** Train the network using expected output with corresponding inputs.
@@ -45,10 +52,10 @@ private:
                                     const NeuralNetwork<U>& n);
 private:
     unsigned int input_nb_;
+    const std::function<T(T)> activate_;
     layer_type hidden_layer_;
     layer_type output_layer_;
 
-    const std::function<T(T)> activate_;
 };
 
 #include "neural-network.hxx"
