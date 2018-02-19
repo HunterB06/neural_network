@@ -1,4 +1,4 @@
-# Simple neural network
+# Simple Neural Network
 
 This is a simple implementation of a neural network done from scratch in C++.
 As an example, you have a main that actually trains the network in order for him
